@@ -1,7 +1,7 @@
 import itertools
 import random
 
-DEBUG_MODE = True  # Set this variable to True to enable debugging, or False to disable
+DEBUG_MODE = False  # Set this variable to True to enable debugging, or False to disable
 
 def debug(*args, **kwargs):
     if DEBUG_MODE:
@@ -18,10 +18,12 @@ unit_stats = {
 }
 
 # Define fleet capacity range
-fleet_capacity_range = range(1, 11)
+fleet_capacity_range = range(1, 6)
+# Set the maximum cost for the fleet
+max_cost = 20
 
 # Define the number of simulations
-num_simulations = 100
+num_simulations = 1
 
 def simulate_battle(attacker, defender):
     # Function to determine the cost of a unit
@@ -78,45 +80,66 @@ def simulate_battle(attacker, defender):
     # Determine the winner
     winner = 'Attacker' if attacker else 'Defender' if defender else 'Draw'
     
-    return attacker, defender, winner
+    # return attacker, defender, winner
 
-# Example usage:
-attacker_units = ['Fighter', 'Fighter', 'Cruiser', 'Destroyer']
-defender_units = ['Dreadnought', 'Carrier', 'Fighter', 'Fighter']
+    # Convert the winner to a numerical value
+    if winner == 'Attacker':
+        return 1
+    elif winner == 'Defender':
+        return 0
+    else:
+        return 0.5
 
-debug(f"Battle between Attacker: {attacker_units} and Defender: {defender_units}")
-result = simulate_battle(attacker_units, defender_units)
-debug(f"Attacker: {result[0]}, Defender: {result[1]}, Winner: {result[2]}")
 
-# # Function to simulate battles
-# def simulate_battles(army1, army2):
-#     wins = 0
-#     for _ in range(num_simulations):
-#         result = random.choice([1, 2])  # Simulate a simple win/loss scenario
-#         if result == 1:
-#             wins += 1
-#     return wins
+# # Example usage:
+# attacker_units = ['Fighter', 'Fighter', 'Cruiser', 'Destroyer']
+# defender_units = ['Dreadnought', 'Carrier', 'Fighter', 'Fighter']
 
-# # Generate all possible combinations of units
-# unit_combinations = []
-# for capacity in fleet_capacity_range:
-#     for combination in itertools.product(unit_stats.keys(), repeat=capacity):
-#         if all(unit_stats[unit]['capacity'] <= capacity for unit in combination):
-#             unit_combinations.append(combination)
+# debug(f"Battle between Attacker: {attacker_units} and Defender: {defender_units}")
+# result = simulate_battle(attacker_units, defender_units)
+# debug(f"Attacker: {result[0]}, Defender: {result[1]}, Winner: {result[2]}")
 
-# # Perform simulations
-# for army1 in unit_combinations:
-#     total_wins = 0
-#     army1_cost = sum(unit_stats[unit]['cost'] for unit in army1)
+# Function to simulate battles
+def simulate_battles(army1, army2):
+    # print(f"SIMULATING BATTLES: between {army1} and {army2}")
+    wins = 0
+    for _ in range(num_simulations):
+        # result = random.choice([1, 2])  # Simulate a simple win/loss scenario
+        # print(f" >> army1: {army1} army2: {army2}")
+        result = simulate_battle(army1, army2)
+        if result == 1:
+            wins += 1
+    return wins
+
+# Generate all possible combinations of units
+unit_combinations = []
+for capacity in fleet_capacity_range:
+    for combination in itertools.product(unit_stats.keys(), repeat=capacity):
+        if (
+            all(unit_stats[unit]['capacity'] <= capacity for unit in combination) and
+            sum(unit_stats[unit]['cost'] for unit in combination) <= max_cost
+        ):
+            unit_combinations.append(combination)  # Add the valid combination to the list
+        # if all(unit_stats[unit]['capacity'] <= capacity for unit in combination):
+        #     unit_combinations.append(combination)
+
+# Perform simulations
+# for army1 in reversed(unit_combinations):
+for army1 in unit_combinations:
+    total_wins = 0
+    army1_cost = sum(unit_stats[unit]['cost'] for unit in army1)
+    army1 = list(army1)
     
-#     print(f"Army Composition ({army1_cost} Resources): {', '.join(army1)}")
+    print(f"Army Composition ({army1_cost} Resources): {', '.join(army1)}")
 
-#     for army2 in unit_combinations:
-#         army2_cost = sum(unit_stats[unit]['cost'] for unit in army2)
-#         wins = simulate_battles(army1, army2)
-#         total_wins += wins
+    for army2 in unit_combinations:
+        army2_cost = sum(unit_stats[unit]['cost'] for unit in army2)
+        army2 = list(army2)
+        wins = simulate_battles(army1, army2)
+        total_wins += wins
 
-#         print(f"  Against Enemy Composition ({army2_cost} Resources): {', '.join(army2)} - {wins} wins")
+        debug(f"  Against Enemy Composition ({army2_cost} Resources): {', '.join(army2)} - {wins} wins")
 
-#     win_percentage = (total_wins / (num_simulations * len(unit_combinations))) * 100
-#     print(f"  Total Win Percentage: {win_percentage:.2f}%\n")
+    print(f" total wins: {total_wins} total simulations: {num_simulations * len(unit_combinations)}")
+    win_percentage = (total_wins / (num_simulations * len(unit_combinations))) * 100
+    print(f"  Total Win Percentage: {win_percentage:.2f}%\n")
