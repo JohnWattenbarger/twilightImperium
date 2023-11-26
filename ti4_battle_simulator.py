@@ -1,6 +1,12 @@
 import itertools
 import random
 
+DEBUG_MODE = True  # Set this variable to True to enable debugging, or False to disable
+
+def debug(*args, **kwargs):
+    if DEBUG_MODE:
+        print(*args, **kwargs)
+
 # Define unit stats and costs
 unit_stats = {
     'Fighter': {'combat': 9, 'cost': 0.5, 'capacity': 0, 'sustain_damage': True},
@@ -15,23 +21,28 @@ unit_stats = {
 fleet_capacity_range = range(1, 11)
 
 # Define the number of simulations
-num_simulations = 1000
+num_simulations = 100
 
 def simulate_battle(attacker, defender):
-    # # Convert Fighter cost to .5
-    # for unit in attacker + defender:
-    #     if unit == 'Fighter':
-    #         unit_stats[unit]['cost'] = 0.5
-
     # Function to determine the cost of a unit
     def unit_cost(unit_type):
         return unit_stats[unit_type]['cost']
 
     # Function to simulate a round of combat
     def combat_round(attacking_units, defending_units):
-        attack_hits = sum(random.randint(1, 10) <= unit_stats[unit]['combat'] for unit in attacking_units)
-        defense_hits = sum(random.randint(1, 10) <= unit_stats[unit]['combat'] for unit in defending_units)
+        debug(f"=== Round {current_round}: === ")
+        attack_hits = sum(roll_die(unit) for unit in attacking_units)
+        defense_hits = sum(roll_die(unit) for unit in defending_units)
+        debug(f" > Attack hits: {attack_hits}, Defense hits: {defense_hits}")
+        debug(f"----------")
         return attack_hits, defense_hits
+    
+    # Function to simulate a single die roll
+    def roll_die(unit):
+        die_roll = random.randint(1, 10)
+        hit = die_roll >= unit_stats[unit]['combat']
+        debug(f"  - Die Roll: {die_roll}, {'Hit' if hit else 'Miss'}")
+        return hit
 
     # Sort units by cost (cheapest to most expensive)
     attacker.sort(key=unit_cost)
@@ -42,18 +53,27 @@ def simulate_battle(attacker, defender):
         unit_stats[unit_type]['remaining_sustain_damage'] = unit_stats[unit_type]['sustain_damage']
 
     # Main battle loop
+    current_round = 1
     while attacker and defender:
         attack_hits, defense_hits = combat_round(attacker, defender)
+        current_round += 1
 
         # Apply hits to defending units with sustain damage
         for unit_type in defender:
             if unit_stats[unit_type]['remaining_sustain_damage'] > 0:
+                sustained_damage = min(defense_hits, unit_stats[unit_type]['remaining_sustain_damage'])
                 unit_stats[unit_type]['remaining_sustain_damage'] -= min(defense_hits, unit_stats[unit_type]['remaining_sustain_damage'])
                 defense_hits -= unit_stats[unit_type]['remaining_sustain_damage']
+                debug(f"  - {unit_type} sustained {sustained_damage} damage")
 
         # Remove destroyed ships
+        destroyed_defender_units = defender[:-defense_hits] if defense_hits > 0 else []
+        destroyed_attacker_units = attacker[:-attack_hits] if attack_hits > 0 else []
         defender = defender[:-defense_hits] if defense_hits > 0 else defender
         attacker = attacker[:-attack_hits] if attack_hits > 0 else attacker
+
+        debug(f"  - Defender units destroyed: {', '.join(destroyed_defender_units)}")
+        debug(f"  - Attacker units destroyed: {', '.join(destroyed_attacker_units)}")
 
     # Determine the winner
     winner = 'Attacker' if attacker else 'Defender' if defender else 'Draw'
@@ -64,9 +84,9 @@ def simulate_battle(attacker, defender):
 attacker_units = ['Fighter', 'Fighter', 'Cruiser', 'Destroyer']
 defender_units = ['Dreadnought', 'Carrier', 'Fighter', 'Fighter']
 
-print(f"Battle between Attacker: {attacker_units} and Defender: {defender_units}")
+debug(f"Battle between Attacker: {attacker_units} and Defender: {defender_units}")
 result = simulate_battle(attacker_units, defender_units)
-print(f"Attacker: {result[0]}, Defender: {result[1]}, Winner: {result[2]}")
+debug(f"Attacker: {result[0]}, Defender: {result[1]}, Winner: {result[2]}")
 
 # # Function to simulate battles
 # def simulate_battles(army1, army2):
